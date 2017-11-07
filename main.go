@@ -2,6 +2,8 @@ package main
 
 import (
 	"github.com/samuel/go-zookeeper/zk"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -28,6 +30,17 @@ type packet struct {
 	member string
 	contents string
 }
+
+type service struct  {
+	Endpoints	[]string `yaml:"endpoints"`
+	Name		string   `yaml:"name"`
+}
+
+type config struct {
+	Services []service `yaml:"services"`
+}
+
+
 
 func init() {
 
@@ -166,26 +179,34 @@ func master() {
 
         oldSnapshot := []string{}
 	
-	config := map[string][]string{
-		"service-name": []string{
-			"172.217.16.99",
-			"172.217.16.110",
-		},
+	configFile := "./config.yml"
+
+	yamlFile, err := ioutil.ReadFile(configFile)
+	if err != nil {
+		log.Fatalf("yamlFile.Get err   #%v ", err)
 	}
+
+	config := config{}
+	err = yaml.Unmarshal(yamlFile, &config)
+	if err != nil {
+		log.Fatalf("Unmarshal: %v", err)
+	}
+	log.Println(config)
+
 	snapshots := make(chan []string)
 	member_content := make(chan packet)
 	errors := make(chan error)
 	ch := make(chan bool, 1)
 
-        for service, service_endpoints := range config {
-		log.Println("Service " + service + " detected")
-		for _, endpoint := range service_endpoints {
-			log.Println("Service " + service + ": endpoint " + endpoint + " detected")
-		        _, err := zkConn.Create("/go-keepAlive/services/" + service, []byte(""), flags_const, acl)
+        for _, service := range config.Services {
+		log.Println("Service " + service.Name + " detected")
+		for _, endpoint := range service.Endpoints {
+			log.Println("Service " + service.Name + ": endpoint " + endpoint + " detected")
+		        _, err := zkConn.Create("/go-keepAlive/services/" + service.Name, []byte(""), flags_const, acl)
                         if err != nil {
 				log.Println(err)
 			}
-		        _, err = zkConn.Create("/go-keepAlive/services/" + service + "/" + endpoint, []byte(""), flags_const, acl)
+		        _, err = zkConn.Create("/go-keepAlive/services/" + service.Name + "/" + endpoint, []byte(""), flags_const, acl)
                         if err != nil {
 				log.Println(err)
 			}

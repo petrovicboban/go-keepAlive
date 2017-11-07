@@ -1,0 +1,7 @@
+---
+services:
+        - name: test_service
+          endpoints:
+                - 172.217.16.99
+                - 172.217.16.110
+
