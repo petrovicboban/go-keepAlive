@@ -14,9 +14,10 @@ import (
 )
 
 var (
-	mode, agentName, zkList   string
-        zkConn			  *zk.Conn
-        acl			  []zk.ACL
+	mode, agentName, zkList		string
+        zkConn				*zk.Conn
+        acl				[]zk.ACL
+	bootstrap			bool
 )
 
 const (
@@ -49,6 +50,7 @@ func init() {
 	flag.StringVar(&mode, "mode", "agent", "Running mode. Can be agent or master. Default is agent.")
 	flag.StringVar(&agentName, "agentName", hostname, "Agent name. Default is hostname.")
 	flag.StringVar(&zkList, "zk", "localhost", "Zookeepers list, separated by comma. Default is localhost.")
+	flag.BoolVar(&bootstrap, "bootstrap", false, "Bootstrap and exit. Default is false.")
 	flag.Parse()
 
         zkConn = connect()
@@ -174,11 +176,8 @@ func agent() {
 	_ = <-ch
 }
 
-func master() {
-	defer zkConn.Close()
+func doBootstrap() {
 
-        oldSnapshot := []string{}
-	
 	configFile := "./config.yml"
 
 	yamlFile, err := ioutil.ReadFile(configFile)
@@ -193,15 +192,11 @@ func master() {
 	}
 	log.Println(config)
 
-	snapshots := make(chan []string)
-	member_content := make(chan packet)
-	errors := make(chan error)
-	ch := make(chan bool, 1)
 
         for _, service := range config.Services {
-		log.Println("Service " + service.Name + " detected")
+		log.Println("Service " + service.Name + " in configuration file")
 		for _, node := range service.Nodes {
-			log.Println("Service " + service.Name + ": node " + node + " detected")
+			log.Println("Service " + service.Name + ": node " + node + " in configuration file")
 		        _, err := zkConn.Create("/go-keepAlive/services/" + service.Name, []byte(""), flags_const, acl)
                         if err != nil {
 				log.Println(err)
@@ -212,6 +207,17 @@ func master() {
 			}
 		}
 	}
+}
+
+func master() {
+	defer zkConn.Close()
+
+	snapshots := make(chan []string)
+	member_content := make(chan packet)
+	errors := make(chan error)
+	ch := make(chan bool, 1)
+        oldSnapshot := []string{}
+	
 	go func() {
 		for {
 			select {
@@ -315,6 +321,11 @@ func master() {
 }
 
 func main() {
+
+	if bootstrap {
+		doBootstrap()
+		os.Exit(0)
+	}	
 
 	switch mode {
 	case "agent":
