@@ -10,7 +10,7 @@ go-keepAlive is HA tool witch checks services health on multiple services nodes 
 ---
 services:
         - name: test_service
-          endpoints:
+          nodes:
                 - 172.217.16.99
                 - 172.217.16.110
 ```
