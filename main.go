@@ -233,9 +233,9 @@ func master() {
 									log.Println("Creating watcher for " + service + "/" + endpoint + "/" + member)
 									for {
 										time.Sleep(200 * time.Millisecond)
-										contents, _, events, err := zkConn.GetW("/go-keepAlive/services/" + service + "/" + endpoint + "/" + member )
+										contents, _, events, err := zkConn.GetW("/go-keepAlive/services/" + service + "/" + endpoint + "/" + member)
 										if err == zk.ErrNoNode {
-											log.Println("Agent " + member + " dissapeared")
+											log.Println("Agent " + member + " does not exist on /" + service + "/" + endpoint)
 											break
 										} 
 										if len(contents) > 0 {
