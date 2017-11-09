@@ -32,8 +32,13 @@ type packet struct {
 	state string
 }
 
+type node struct {
+	Ip	string `yaml:"ip"`
+	Port	string `yaml:"port"`
+}
+
 type service struct  {
-	Nodes		[]string `yaml:"nodes"`
+	Nodes		[]node `yaml:"nodes"`
 	Name		string   `yaml:"name"`
 }
 
@@ -143,7 +148,9 @@ func agent() {
 				_, err := createIfNotExists("/go-keepAlive/agents/" + agentName, flags_ephem)
 				must(err)
 				for {
- 					connection, err := net.DialTimeout("tcp", net.JoinHostPort(node, "80"), 1000 * time.Millisecond)
+					port, _, err := zkConn.Get("/go-keepAlive/services/" + service + "/" + node)	
+					must(err)
+ 					connection, err := net.DialTimeout("tcp", net.JoinHostPort(node, string(port)), 1000 * time.Millisecond)
 					if err != nil {
 						log.Printf("%s/%s: %v", service, node, err)
 						nok++
@@ -196,12 +203,16 @@ func doBootstrap() {
         for _, service := range config.Services {
 		log.Println("Service " + service.Name + " in configuration file")
 		for _, node := range service.Nodes {
-			log.Println("Service " + service.Name + ": node " + node + " in configuration file")
+			log.Println("Service " + service.Name + ": node " + node.Ip + ":" + node.Port + " detected in configuration file")
 		        _, err := zkConn.Create("/go-keepAlive/services/" + service.Name, []byte(""), flags_const, acl)
                         if err != nil {
 				log.Println(err)
 			}
-		        _, err = zkConn.Create("/go-keepAlive/services/" + service.Name + "/" + node, []byte(""), flags_const, acl)
+		        _, err = zkConn.Create("/go-keepAlive/services/" + service.Name + "/" + node.Ip, []byte(""), flags_const, acl)
+                        if err != nil {
+				log.Println(err)
+			}
+			_, err = zkConn.Set("/go-keepAlive/services/" + service.Name + "/" + node.Ip, []byte(node.Port), -1)
                         if err != nil {
 				log.Println(err)
 			}
