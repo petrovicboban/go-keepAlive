@@ -232,6 +232,7 @@ func master() {
 								go func(service, endpoint, member string) {
 									log.Println("Creating watcher for " + service + "/" + endpoint + "/" + member)
 									for {
+										time.Sleep(200 * time.Millisecond)
 										contents, _, events, err := zkConn.GetW("/go-keepAlive/services/" + service + "/" + endpoint + "/" + member )
 										if err == zk.ErrNoNode {
 											log.Println("Agent " + member + " dissapeared")
