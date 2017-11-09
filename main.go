@@ -26,13 +26,13 @@ const (
 
 type packet struct {
 	service string
-	endpoint string
-	member string
-	contents string
+	node string
+	agent string
+	state string
 }
 
 type service struct  {
-	Endpoints	[]string `yaml:"endpoints"`
+	Nodes		[]string `yaml:"nodes"`
 	Name		string   `yaml:"name"`
 }
 
@@ -127,26 +127,26 @@ func agent() {
         for _, service := range services {
                 log.Println("Service " + service + " detected in config at zookeeper(s)")
 
-		endpoints, _, err := zkConn.Children("/go-keepAlive/services/" + service)
-        	for _, endpoint := range endpoints {
-			log.Println("Service " + service + ": endpoint " + endpoint + " detected in config at zookeeper(s)")
+		nodes, _, err := zkConn.Children("/go-keepAlive/services/" + service)
+        	for _, node := range nodes {
+			log.Println("Service " + service + ": node " + node + " detected in config at zookeeper(s)")
 
-		        _, err = createIfNotExists("/go-keepAlive/services/" + service + "/" + endpoint + "/" + agentName, flags_ephem)
+		        _, err = createIfNotExists("/go-keepAlive/services/" + service + "/" + node + "/" + agentName, flags_ephem)
 			must(err)
 
-			go func(service, endpoint string) {
+			go func(service, node string) {
 				ok := 0
 				nok := 0
 
 				_, err := createIfNotExists("/go-keepAlive/agents/" + agentName, flags_ephem)
 				must(err)
 				for {
- 					connection, err := net.DialTimeout("tcp", net.JoinHostPort(endpoint, "80"), 1000 * time.Millisecond)
+ 					connection, err := net.DialTimeout("tcp", net.JoinHostPort(node, "80"), 1000 * time.Millisecond)
 					if err != nil {
-						log.Printf("%s/%s: %v", service, endpoint, err)
+						log.Printf("%s/%s: %v", service, node, err)
 						nok++
   						if nok == 3 {
-							_, err = zkConn.Set("/go-keepAlive/services/" + service + "/" + endpoint + "/" + agentName, []byte("false"), -1)
+							_, err = zkConn.Set("/go-keepAlive/services/" + service + "/" + node + "/" + agentName, []byte("false"), -1)
 							must(err)
 							ok = 0
 						}
@@ -157,7 +157,7 @@ func agent() {
 						log.Println(connection.RemoteAddr().String() + " established")
  						ok++
         	                	        if ok == 2 { 
-							_, err = zkConn.Set("/go-keepAlive/services/" + service + "/" + endpoint + "/" + agentName, []byte("true"), -1)
+							_, err = zkConn.Set("/go-keepAlive/services/" + service + "/" + node + "/" + agentName, []byte("true"), -1)
 							must(err)
 							nok = 0
 						}
@@ -168,7 +168,7 @@ func agent() {
 					}
 					time.Sleep(time.Second * 2)
 				}
-			} (service, endpoint)
+			} (service, node)
 		}
 	}
 	_ = <-ch
@@ -200,13 +200,13 @@ func master() {
 
         for _, service := range config.Services {
 		log.Println("Service " + service.Name + " detected")
-		for _, endpoint := range service.Endpoints {
-			log.Println("Service " + service.Name + ": endpoint " + endpoint + " detected")
+		for _, node := range service.Nodes {
+			log.Println("Service " + service.Name + ": node " + node + " detected")
 		        _, err := zkConn.Create("/go-keepAlive/services/" + service.Name, []byte(""), flags_const, acl)
                         if err != nil {
 				log.Println(err)
 			}
-		        _, err = zkConn.Create("/go-keepAlive/services/" + service.Name + "/" + endpoint, []byte(""), flags_const, acl)
+		        _, err = zkConn.Create("/go-keepAlive/services/" + service.Name + "/" + node, []byte(""), flags_const, acl)
                         if err != nil {
 				log.Println(err)
 			}
@@ -225,21 +225,21 @@ func master() {
 				        services, _, err := zkConn.Children("/go-keepAlive/services")
         	                        must(err)
  					for _, service := range services {
-                				endpoints, _, err := zkConn.Children("/go-keepAlive/services/" + service)
+                				nodes, _, err := zkConn.Children("/go-keepAlive/services/" + service)
 						must(err)
-			                	for _, endpoint := range endpoints {
-							for _, member := range difference(snapshot, oldSnapshot) {
-								go func(service, endpoint, member string) {
-									log.Println("Creating watcher for " + service + "/" + endpoint + "/" + member)
+			                	for _, node := range nodes {
+							for _, agent := range difference(snapshot, oldSnapshot) {
+								go func(service, node, agent string) {
+									log.Println("Creating watcher for " + service + "/" + node + "/" + agent)
 									for {
 										time.Sleep(200 * time.Millisecond)
-										contents, _, events, err := zkConn.GetW("/go-keepAlive/services/" + service + "/" + endpoint + "/" + member)
+										state, _, events, err := zkConn.GetW("/go-keepAlive/services/" + service + "/" + node + "/" + agent)
 										if err == zk.ErrNoNode {
-											log.Println("Agent " + member + " does not exist on /" + service + "/" + endpoint)
+											log.Println("Agent " + agent + " does not exist on /" + service + "/" + node)
 											break
 										} 
-										if len(contents) > 0 {
-											member_content <- packet{service, endpoint, member, string(contents)}
+										if len(state) > 0 {
+											member_content <- packet{service, node, agent, string(state)}
 										}
 										evt := <-events
 			                       					if evt.Err != nil {
@@ -247,8 +247,8 @@ func master() {
 							                                return
 							                        }
 									}
-									log.Println("Removing watcher for " + service + "/" + endpoint + "/" + member)
-								}(service, endpoint, member)
+									log.Println("Removing watcher for " + service + "/" + node + "/" + agent)
+								}(service, node, agent)
 							}
 						}
 					}
@@ -263,31 +263,31 @@ func master() {
 		for {
 			select {
 			case contents := <-member_content:
-				log.Printf("/go-keepAlive/services/%s/%s/%s reported: %s", contents.service, contents.endpoint, contents.member, contents.contents)
-				agents, _, err := zkConn.Children("/go-keepAlive/services/" + contents.service + "/" + contents.endpoint)
+				log.Printf("/go-keepAlive/services/%s/%s/%s reported: %s", contents.service, contents.node, contents.agent, contents.state)
+				agents, _, err := zkConn.Children("/go-keepAlive/services/" + contents.service + "/" + contents.node)
 				must(err)
 				count := len(agents)
 				i := 0
 				for _, agent := range agents {
-					data, _, err := zkConn.Get("/go-keepAlive/services/" + contents.service + "/" + contents.endpoint + "/" + agent)					
+					data, _, err := zkConn.Get("/go-keepAlive/services/" + contents.service + "/" + contents.node + "/" + agent)					
 					must(err)
 					if bytes.Equal(data, []byte("true")) {
 						i++
 					}
 				}
-				log.Printf("Checks on %s/%s: %d/%d agents reported healthy", contents.service, contents.endpoint, i, count)
+				log.Printf("Checks on %s/%s: %d/%d agents reported healthy", contents.service, contents.node, i, count)
 				data, _, err := zkConn.Get("/go-keepAlive/services/" + contents.service)
 				if float64(i)/float64(count) > 0.5 {
-					if !bytes.Contains(data, []byte(contents.endpoint)) {
-						data = bytes.TrimSpace(append(data, " " + contents.endpoint...))
-						log.Printf("Adding endpoint %s to service %s contents", contents.endpoint, contents.service)
+					if !bytes.Contains(data, []byte(contents.node)) {
+						data = bytes.TrimSpace(append(data, " " + contents.node...))
+						log.Printf("Adding node %s to service %s contents", contents.node, contents.service)
         	                                 _, err = zkConn.Set("/go-keepAlive/services/" + contents.service, data, -1) 
 					}
 				} else {
-					if bytes.Contains(data, []byte(contents.endpoint)) {
-						data = bytes.Replace(data, []byte(contents.endpoint), []byte(""), -1)	
+					if bytes.Contains(data, []byte(contents.node)) {
+						data = bytes.Replace(data, []byte(contents.node), []byte(""), -1)	
 						data = bytes.TrimSpace(bytes.Replace(data, []byte("  "), []byte(" "), -1))	
-						log.Printf("Removing endpoint %s from service %s contents", contents.endpoint, contents.service)
+						log.Printf("Removing node %s from service %s contents", contents.node, contents.service)
         	                                 _, err = zkConn.Set("/go-keepAlive/services/" + contents.service, data, -1) 
 					}
 				}
