@@ -11,8 +11,10 @@ go-keepAlive is HA tool witch checks services health on multiple services nodes 
 services:
         - name: test_service
           nodes:
-                - 172.217.16.99
-                - 172.217.16.110
+                - ip: 172.217.16.99
+                  port: 80
+                - ip: 172.217.16.110
+                  port: 80
 ```
 
 - start app in master mode:
