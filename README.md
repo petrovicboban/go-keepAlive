@@ -17,13 +17,13 @@ services:
                   port: 80
 ```
 
-- start app in master mode:
-`go_keepAlive -mode master`  
-App connects to zookeeper(s) defined with `-zk` flag or localhost by default
+- start app in bootstrap mode:
+`go_keepAlive -bootstrap`  
+App connects to zookeeper(s) defined with `-zk` flag or localhost by default, and creates zk nodes structure as defined in configuration file.
 
-- start app in agent node on three servers:
+- start app node on multiple servers:
 `go_keepalive`  
-App in agent node does not need configuration, it reads it from zookeeper.
+App does not need configuration, it reads it from zookeeper. Also, it auto detects if it should start in master or agent mode: if there is no master, it will start in master mode; otherwise, it will start in agent mode.  
 It also requires `-zk` flag if zookeeper is not on localhost.
 
 - read contents of service node, representing healthy nodes:  
