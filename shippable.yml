@@ -4,14 +4,10 @@ go:
   - 1.8
   - 1.9
 
-env:
-  global:
-    - CI_REPORT=shippable/testresults/junit.xml
-
 build:
   ci:
-    - export GOPATH=$SHIPPABLE_GOPATH
-    - env
+#    - export GOPATH=$SHIPPABLE_GOPATH
+#    - env
 
     - go get -d -v ./...
     - go get github.com/t-yuki/gocover-cobertura
@@ -24,9 +20,7 @@ build:
     - go test -v -coverprofile=coverage.out | go-junit-report > shippable/testresults/report.xml
     - gocov convert coverage.out | gocov-xml > shippable/codecoverage/report.xml
 #    - $GOPATH/bin/gocover-cobertura < coverage.txt > shippable/codecoverage/coverage.xml
-    - ls -al
     - go build -v ./...
-    - ls -al
 
 
 
