@@ -11,19 +11,15 @@ env:
 before_install:
   - export GOPATH=$SHIPPABLE_GOPATH
   - go get github.com/t-yuki/gocover-cobertura    
-  - go get golang.org/x/tools/cmd/cover
-  - go get github.com/stretchr/objx
-  - go get github.com/stretchr/testify/assert
+  - go get github.com/jstemmer/go-junit-report
+  - go get github.com/axw/gocov/gocov
+  - go get github.com/axw/gocov/...
+  - go get github.com/AlekSi/gocov-xml
 
 
 
 script:
-  - go test -coverprofile=coverage.txt -covermode count ./...
-  - $GOPATH/bin/gocover-cobertura < coverage.txt > shippable/codecoverage/coverage.xml
+  - go test -coverprofile=coverage.txt -covermode count ./  2>&1 | $GOPATH/bin/go-junit-report > shippable/testresults/report.xml
+  - $GOPATH/bin/gocov convert coverage.txt | $GOPATH/bin/gocov-xml > shippable/codecoverage/report.xml
   - CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
-after_script:
-  - ls -al
-  - cp main ./shippable/buildoutput
-  - ls ./shippable -ltrR
-  - cat ./shippable/codecoverage/coverage.xml
