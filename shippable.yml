@@ -13,9 +13,11 @@ build:
     - export GOPATH=$SHIPPABLE_GOPATH
     - env
     - go get -d -v ./...
+    - go get github.com/t-yuki/gocover-cobertura
     - go test -coverprofile=$(pwd)/coverage.txt -covermode count ./...
+    - $GOPATH/bin/gocover-cobertura < coverage.txt > shippable/codecoverage/coverage.xml
     - ls -al
-    - go build main
+    - go build -v ./...
     - ls -al
 
 
