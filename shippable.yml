@@ -2,6 +2,7 @@ language: go
 
 go:
   - 1.8
+  - 1.9
 
 env:
   global:
@@ -15,10 +16,6 @@ before_install:
   - go get github.com/stretchr/testify/assert
 
 
-# Make folders for the reports
-before_script:
-  - mkdir -p shippable/testresults
-  - mkdir -p shippable/codecoverage
 
 script:
   - go test -coverprofile=coverage.txt -covermode count ./...
