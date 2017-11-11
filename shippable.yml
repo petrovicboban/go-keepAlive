@@ -17,12 +17,12 @@ build:
     - go get -v github.com/axw/gocov/gocov
     - go get -v github.com/axw/gocov/...
     - go get -v github.com/AlekSi/gocov-xml
-    - pwd && ls -lRa
-    - go test -coverprofile=$(pwd)/coverage.txt -covermode count ./  > test.out 2>&1
-    - cat test.out | $GOPATH/bin/go-junit-report > shippable/testresults/report.xml
+    - go test -coverprofile=$(pwd)/coverage.txt -covermode count ./...
+#    - cat test.out | $GOPATH/bin/go-junit-report > shippable/testresults/report.xml
     - ls -al
-    - $GOPATH/bin/gocov convert $(pwd)/coverage.txt | $GOPATH/bin/gocov-xml > shippable/codecoverage/report.xml
+#    - $GOPATH/bin/gocov convert $(pwd)/coverage.txt | $GOPATH/bin/gocov-xml > shippable/codecoverage/report.xml
     - go build main
+    - ls -al
 
 
 
