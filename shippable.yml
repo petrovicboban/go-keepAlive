@@ -17,9 +17,18 @@ before_install:
   - go get github.com/AlekSi/gocov-xml
 
 
+build:
+  ci:
+    - export GOPATH=$SHIPPABLE_GOPATH
+    - go get github.com/t-yuki/gocover-cobertura    
+    - go get github.com/jstemmer/go-junit-report
+    - go get github.com/axw/gocov/gocov
+    - go get github.com/axw/gocov/...
+    - go get github.com/AlekSi/gocov-xml
+    - go test -coverprofile=coverage.txt -covermode count ./  2>&1 | $GOPATH/bin/go-junit-report > shippable/testresults/report.xml
+    - $GOPATH/bin/gocov convert coverage.txt | $GOPATH/bin/gocov-xml > shippable/codecoverage/report.xml
+    - go build main
 
-script:
-  - go test -coverprofile=coverage.txt -covermode count ./  2>&1 | $GOPATH/bin/go-junit-report > shippable/testresults/report.xml
-  - $GOPATH/bin/gocov convert coverage.txt | $GOPATH/bin/gocov-xml > shippable/codecoverage/report.xml
-  - CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+
+
 
