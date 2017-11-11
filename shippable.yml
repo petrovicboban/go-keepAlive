@@ -6,9 +6,6 @@ go:
 
 build:
   ci:
-#    - export GOPATH=$SHIPPABLE_GOPATH
-#    - env
-
     - go get -d -v ./...
     - go get github.com/t-yuki/gocover-cobertura
     - go get github.com/jstemmer/go-junit-report
@@ -16,10 +13,8 @@ build:
     - go get github.com/AlekSi/gocov-xml
 
 
-#    - go test -coverprofile=$(pwd)/coverage.txt -covermode count ./...
     - go test -v -coverprofile=coverage.out | go-junit-report > shippable/testresults/report.xml
     - gocov convert coverage.out | gocov-xml > shippable/codecoverage/report.xml
-#    - $GOPATH/bin/gocover-cobertura < coverage.txt > shippable/codecoverage/coverage.xml
     - go build -v ./...
 
 
