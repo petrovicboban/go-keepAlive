@@ -1,7 +1,6 @@
 # go-keepAlive
 
 
-
 go-keepAlive is HA tool witch checks services health on multiple services nodes and updates zookeeper node defined for specific service with healthy services nodes.  
 
 ### Quick start
